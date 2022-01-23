@@ -1,0 +1,43 @@
+{
+  "name": "private-ethereum",
+  "version": "1.0.0",
+  "description": "A private ethereum blockchain built on NodeJS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node .",
+    "build-linux": "pkg -t node6-linux index.js -o dist/private-ethereum"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pingleware/private-ethereum.git"
+  },
+  "keywords": [
+    "ethereum"
+  ],
+  "author": {
+    "name": "PressPage Entertainment Inc DBA RedeeCash",
+    "email": "maintainers@redeecash.network",
+    "url": "https://redeecash.network"
+  },
+  "maintainers": [
+    {
+      "name": "PressPage Entertainment Inc DBA PINGLEWARE",
+      "email": "maintainers@pingleware.work",
+      "url": "https://pingleware.work"
+    }
+  ],
+  "license": "BY-CC-4.0",
+  "bugs": {
+    "url": "https://github.com/pingleware/private-ethereum/issues"
+  },
+  "homepage": "https://github.com/pingleware/private-ethereum#readme",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "config.json": "^0.0.4",
+    "express": "^4.17.2",
+    "express-graphql": "^0.12.0",
+    "graphql": "^15.8.0",
+    "json-rpc-2.0": "^1.0.0"
+  }
+}
