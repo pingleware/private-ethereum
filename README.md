@@ -11,4 +11,4 @@ Navigate to,
 
 to view,
 
-![GraphQL-UI](assets/graphql=ui.png "GraphQL-UI")
+![GraphQL-UI](assets/graphql-ui.png "GraphQL-UI")
