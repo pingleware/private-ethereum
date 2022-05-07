@@ -12,3 +12,6 @@ Navigate to,
 to view,
 
 ![GraphQL-UI](assets/graphql-ui.png "GraphQL-UI")
+
+Learning GraphQL
+![]()(https://www.youtube.com/watch?v=l2rzT_Dp4T0)

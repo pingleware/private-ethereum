@@ -1,3 +1,12 @@
 {
-    "port": 8545
+    "port": 8545,
+    "chainID": 1337,
+    "gasPrice": 40000,
+    "database": {
+        "host": "192.168.0.146",
+        "name": "private-ethereum",
+        "port": 3306,
+        "user": "ethereum",
+        "pass": "My@Private!N3t"
+    }
 }

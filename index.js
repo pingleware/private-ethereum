@@ -16,8 +16,22 @@ var personal = require("./namespace_personal.js");
 var miner = require("./namespace_miner.js");
 var txpool = require("./namespace_txpool.js");
 
-// Construct a schema, using GraphQL schema language - A PLACEHOLDER
-var schema = buildSchema(`
+var fs         = require('fs');
+var mysql      = require('mysql');
+var connection = mysql.createConnection(
+  {
+    host     : settings.database.host,
+    database : settings.database.name,
+    port     : settings.database.port,
+    user     : settings.database.user,
+    password : settings.database.pass,
+    multipleStatements: true
+  }
+);
+
+
+// Adding Type Definitions
+const typeDefinition = `
   # Bytes32 is a 32 byte binary string, represented as 0x-prefixed hexadecimal.
   scalar Bytes32
   # Address is a 20 byte Ethereum address, represented as 0x-prefixed hexadecimal.
@@ -53,6 +67,7 @@ var schema = buildSchema(`
       # by its 32 byte slot identifier.
       storage(slot: Bytes32!): Bytes32!
   }
+
   # Log is an Ethereum event log.
   type Log {
       # Index is the index of this log in the block.
@@ -92,9 +107,9 @@ var schema = buildSchema(`
       # GasPrice is the price offered to miners for gas, in wei per unit.
       gasPrice: BigInt!
       # MaxFeePerGas is the maximum fee per gas offered to include a transaction, in wei. 
-  maxFeePerGas: BigInt
+      maxFeePerGas: BigInt
       # MaxPriorityFeePerGas is the maximum miner tip per gas offered to include a transaction, in wei. 
-  maxPriorityFeePerGas: BigInt
+      maxPriorityFeePerGas: BigInt
       # Gas is the maximum amount of gas this transaction can consume.
       gas: Long!
       # InputData is the data supplied to the target of the transaction.
@@ -142,16 +157,16 @@ var schema = buildSchema(`
       # empty, results will not be filtered by address.
       addresses: [Address!]
       # Topics list restricts matches to particular event topics. Each event has a list
-    # of topics. Topics matches a prefix of that list. An empty element array matches any
-    # topic. Non-empty elements represent an alternative that matches any of the
-    # contained topics.
-    #
-    # Examples:
-    #  - [] or nil          matches any topic list
-    #  - [[A]]              matches topic A in first position
-    #  - [[], [B]]          matches any topic in first position, B in second position
-    #  - [[A], [B]]         matches topic A in first position, B in second position
-    #  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
+      # of topics. Topics matches a prefix of that list. An empty element array matches any
+      # topic. Non-empty elements represent an alternative that matches any of the
+      # contained topics.
+      #
+      # Examples:
+      #  - [] or nil          matches any topic list
+      #  - [[A]]              matches topic A in first position
+      #  - [[], [B]]          matches any topic in first position, B in second position
+      #  - [[A], [B]]         matches topic A in first position, B in second position
+      #  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
       topics: [[Bytes32!]!]
   }
   # Block is an Ethereum block.
@@ -182,7 +197,7 @@ var schema = buildSchema(`
       # GasUsed is the amount of gas that was used executing transactions in this block.
       gasUsed: Long!
       # BaseFeePerGas is the fee perunit of gas burned by the protocol in this block.
-  baseFeePerGas: BigInt
+      baseFeePerGas: BigInt
       # Timestamp is the unix timestamp at which this block was mined.
       timestamp: Long!
       # LogsBloom is a bloom filter that can be used to check if a block may
@@ -238,9 +253,9 @@ var schema = buildSchema(`
       # GasPrice is the price, in wei, offered for each unit of gas.
       gasPrice: BigInt
       # MaxFeePerGas is the maximum fee per gas offered, in wei. 
-  maxFeePerGas: BigInt
+      maxFeePerGas: BigInt
       # MaxPriorityFeePerGas is the maximum miner tip per gas offered, in wei. 
-  maxPriorityFeePerGas: BigInt
+      maxPriorityFeePerGas: BigInt
       # Value is the value, in wei, sent along with the call.
       value: BigInt
       # Data is the data sent to the callee.
@@ -267,16 +282,16 @@ var schema = buildSchema(`
       # empty, results will not be filtered by address.
       addresses: [Address!]
       # Topics list restricts matches to particular event topics. Each event has a list
-    # of topics. Topics matches a prefix of that list. An empty element array matches any
-    # topic. Non-empty elements represent an alternative that matches any of the
-    # contained topics.
-    #
-    # Examples:
-    #  - [] or nil          matches any topic list
-    #  - [[A]]              matches topic A in first position
-    #  - [[], [B]]          matches any topic in first position, B in second position
-    #  - [[A], [B]]         matches topic A in first position, B in second position
-    #  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
+      # of topics. Topics matches a prefix of that list. An empty element array matches any
+      # topic. Non-empty elements represent an alternative that matches any of the
+      # contained topics.
+      #
+      # Examples:
+      #  - [] or nil          matches any topic list
+      #  - [[A]]              matches topic A in first position
+      #  - [[], [B]]          matches any topic in first position, B in second position
+      #  - [[A], [B]]         matches topic A in first position, B in second position
+      #  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
       topics: [[Bytes32!]!]
   }
   # SyncState contains the current synchronisation state of the client.
@@ -302,44 +317,116 @@ var schema = buildSchema(`
     # successful execution of a transaction for the pending state.
     estimateGas(data: CallData!): Long!
   }  
+  
+  type Query  {
+    # Block fetches an Ethereum block by number or by hash. If neither is
+    # supplied, the most recent known block is returned.
+    block(number: Long, hash: Bytes32): Block
+    # Blocks returns all the blocks between two numbers, inclusive. If
+    # to is not supplied, it defaults to the most recent known block.
+    blocks(from: Long, to: Long): [Block!]!
+    # Pending returns the current pending state.
+    pending: Pending!
+    # Transaction returns a transaction specified by its hash.
+    transaction(hash: Bytes32!): Transaction
+    # Logs returns log entries matching the provided filter.
+    logs(filter: FilterCriteria!): [Log!]!
+    # GasPrice returns the node's estimate of a gas price sufficient to
+    # ensure a transaction is mined in a timely fashion.
+    gasPrice: BigInt!
+    # MaxPriorityFeePerGas returns the node's estimate of a gas tip sufficient
+    # to ensure a transaction is mined in a timely fashion.
+    maxPriorityFeePerGas: BigInt!
+    # Syncing returns information on the current synchronisation state.
+    syncing: SyncState
+    # ChainID returns the current chain ID for transaction replay protection.
+    chainID: BigInt!
+  }
 
-  type Query {
-      # Block fetches an Ethereum block by number or by hash. If neither is
-      # supplied, the most recent known block is returned.
-      block(number: Long, hash: Bytes32): Block
-      # Blocks returns all the blocks between two numbers, inclusive. If
-      # to is not supplied, it defaults to the most recent known block.
-      blocks(from: Long, to: Long): [Block!]!
-      # Pending returns the current pending state.
-      pending: Pending!
-      # Transaction returns a transaction specified by its hash.
-      transaction(hash: Bytes32!): Transaction
-      # Logs returns log entries matching the provided filter.
-      logs(filter: FilterCriteria!): [Log!]!
-      # GasPrice returns the node's estimate of a gas price sufficient to
-      # ensure a transaction is mined in a timely fashion.
-      gasPrice: BigInt!
-      # MaxPriorityFeePerGas returns the node's estimate of a gas tip sufficient
-      # to ensure a transaction is mined in a timely fashion.
-      maxPriorityFeePerGas: BigInt!
-      # Syncing returns information on the current synchronisation state.
-      syncing: SyncState
-      # ChainID returns the current chain ID for transaction replay protection.
-      chainID: BigInt!
-    }
+  type Mutation {
+    # SendRawTransaction sends an RLP-encoded transaction to the network.
+    sendRawTransaction(data: Bytes!): Bytes32!
+  }
+`;
 
-    type Mutation {
-      # SendRawTransaction sends an RLP-encoded transaction to the network.
-      sendRawTransaction(data: Bytes!): Bytes32!
-    }
-`);
 
-// The root provides a resolver function for each API endpoint - A PLACEHOLDER
-var root = {
-  query: () => {
-    return `{"block":{"number":6004069}}`;
+// Adding resolver
+const  resolverObject = {
+
+  Query : {
+    block(root, args, context) { 
+      var _block;
+      var sql = `SELECT blocks WHERE number=${args.number} AND hash='${args.hash}'`;
+      connection.connect();
+      connection.query(sql, function(err, rows, fields) {
+        if (err) throw err;
+        console.log(rows);
+        _block = rows[0];
+      });
+      connection.end();
+      return _block;
+    },
+    blocks(root, args, context) { 
+      var _blocks;
+      var sql = `SELECT * FROM blocks`;
+      connection.connect();
+      connection.query(sql, function(err, rows, fields) {
+        if (err) throw err;
+        console.log(rows);
+        _blocks = rows;
+      });
+      connection.end();
+      return blocks; 
+    },
+    pending() { 
+      var _pending;
+      var sql = `SELECT * FROM pending;`;
+      connection.connect();
+      connection.query(sql, function(err, rows, fields) {
+        if (err) throw err;
+        console.log(rows);
+        _pending = rows;
+      });
+      connection.end();
+      return _pending; 
+    },
+    transaction(root, args, context) {
+      var _transaction;
+      var sql = `SELECT * FROM transactions WHERE hash='${args.hash}';`; 
+      connection.connect();
+      connection.query(sql, function(err, rows, fields) {
+        if (err) throw err;
+        console.log(rows);
+        _transaction = rows[0];
+      });
+      connection.end();
+      return _transaction; 
+    },
+    logs(root, args, context) {
+      var _logs;
+      var sql = `SELECT * FROM logs WHERE ${args.filter}`; 
+      connection.connect();
+      connection.query(sql, function(err, rows, fields) {
+        if (err) throw err;
+        console.log(rows);
+        _logs = rows;
+      });
+      connection.end();
+      return _logs; 
+    },
+    gasPrice: () => { return settings.gasPrice; }, 
+    maxPriorityFeePerGas: () => { return 0; },
+    syncing: () => { return null; },
+    chainID: () => {return settings.chainID},
   },
-};
+
+  Mutation: {
+    sendRawTransaction: (data) => {return data;}
+  }
+}
+
+const {makeExecutableSchema} = require('@graphql-tools/schema')
+const schema = makeExecutableSchema({typeDefs:typeDefinition, resolvers:resolverObject})
 
 const server = new JSONRPCServer();
 
@@ -441,7 +528,7 @@ app.use(bodyParser.json());
  */
 app.use('/graphql', graphqlHTTP({
     schema: schema,
-    rootValue: root,
+    rootValue: resolverObject,
     graphiql: true,
 }));
 
